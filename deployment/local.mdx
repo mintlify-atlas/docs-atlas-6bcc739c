@@ -105,7 +105,7 @@ Running BotMeriendo directly with Python — without Docker — is the most conv
 ## Development tips
 
 - **Source code lives in `src/`** — the bot is structured as a package with cogs (`src/cogs/`), utilities (`src/utils/`), and a central config module (`src/config.py`). Any change you make takes effect the next time you restart the process.
-- **Logs go to two places at once** — the logging setup in `src/utils/logger.py` writes to both `bot.log` (rotating file) and stdout simultaneously, so you can watch the terminal and also inspect the file after the fact.
+- **Logs go to two places at once** — the logging setup in `src/utils/logger.py` writes to both `bot.log` and stdout simultaneously, so you can watch the terminal and also inspect the file after the fact.
 - **The `src/` volume mount in `docker-compose.yml`** — if you switch to Docker, the compose file mounts `./src` into the container at `/app/src`. This means you can edit source files on the host and restart the container (without a full rebuild) to pick up the changes.
 
 <Warning>

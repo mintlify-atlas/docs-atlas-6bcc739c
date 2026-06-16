@@ -1,7 +1,7 @@
 ---
 title: "Discord event listeners in BotMeriendo"
 sidebarTitle: "Events"
-description: "src/cogs/events.py registers on_ready, on_member_join, on_command_error, and on_voice_state_update listeners that handle bot lifecycle, member activity, and voice channel management."
+description: "BotMeriendo's events cog has four gateway listeners: bot lifecycle, welcome DMs, command error replies, and auto voice-channel disconnect on inactivity."
 ---
 
 `src/cogs/events.py` registers Discord gateway event listeners that handle bot lifecycle, member activity, command errors, and voice channel state changes. All four listeners live in the `Events` cog, which is loaded at startup by `main.py` along with the music and general cogs. The events cog also imports `music_queues` from `src.cogs.music` so it can clear a guild's queue whenever the bot disconnects from voice.

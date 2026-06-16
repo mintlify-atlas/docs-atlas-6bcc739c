@@ -28,7 +28,7 @@ BotMeriendo is a self-hosted Discord bot built in Python that brings music playb
     A production-ready `Dockerfile` and `docker-compose.yml` are included, making deployment and updates reproducible on any host.
   </Card>
   <Card title="Structured Logging" icon="file-lines">
-    A rotating log system writes activity to both `bot.log` and stdout simultaneously, making debugging straightforward in any environment.
+    Logs are written to both `bot.log` and stdout simultaneously, making debugging straightforward in any environment.
   </Card>
   <Card title="Graceful Error Handling" icon="triangle-exclamation">
     Users receive visual feedback inside Discord whenever something goes wrong, and the bot shuts down cleanly on `SIGTERM`/`SIGINT`.
@@ -47,7 +47,7 @@ botMeriendo/
 │   │   ├── general.py # Basic commands
 │   │   └── music.py   # Music playback logic
 │   ├── utils/         # Shared utilities
-│   │   ├── logger.py  # Rotating log configuration
+│   │   ├── logger.py  # Log configuration
 │   │   └── state.py   # Shared state (queues)
 │   ├── config.py      # Configuration and validation
 │   └── main.py        # Entry point

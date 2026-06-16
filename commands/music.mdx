@@ -1,5 +1,5 @@
 ---
-title: "Music commands for BotMeriendo"
+title: "Music commands reference for the BotMeriendo Discord bot"
 sidebarTitle: "Music"
 description: "Complete reference for BotMeriendo's music commands — play, skip, pause, resume, stop, queue, join, and leave — powered by yt-dlp and FFmpeg."
 ---
@@ -167,16 +167,6 @@ The embed is accompanied by two interactive buttons:
 | ⏭️ **Skip** | Red | Skips to the next song in the queue. |
 
 Clicking a button sends an ephemeral (private) acknowledgment only visible to the user who clicked it. The embed itself is updated in place to reflect the new pause/resume state.
-
----
-
-## Auto-Disconnect
-
-If BotMeriendo is the **only member** remaining in a voice channel, it waits **60 seconds** and then disconnects automatically, clearing the guild's queue. This frees up voice resources when everyone has left.
-
-<Note>
-  The auto-disconnect timer resets if another member rejoins the channel within the 60-second window.
-</Note>
 
 ---
 

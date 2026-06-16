@@ -1,7 +1,7 @@
 ---
 title: "Logging configuration and output in BotMeriendo"
 sidebarTitle: "Logging"
-description: "BotMeriendo writes structured logs to both bot.log and stdout via Python's logging module, with per-namespace level control to keep discord.py noise out of production logs."
+description: "BotMeriendo logs to bot.log and stdout via Python's logging module, with per-namespace overrides that suppress discord.py noise and surface gateway events."
 ---
 
 BotMeriendo uses Python's standard `logging` module configured in `src/utils/logger.py`. Logs are written simultaneously to `bot.log` (in the project root working directory) and to stdout, making them accessible both as a persistent file and via `docker compose logs`. The entire logging setup happens at module import time — `setup_logging()` is called when `logger.py` is first imported, so the `logger` object is ready before any cog loads.
@@ -82,7 +82,7 @@ grep ERROR bot.log
 **Directly inside a running container:**
 
 ```bash
-docker compose exec bot tail -f bot.log
+docker compose exec discord-bot tail -f bot.log
 ```
 
 <Tip>

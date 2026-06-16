@@ -1,7 +1,7 @@
 ---
 title: "BotMeriendo architecture and project structure"
 sidebarTitle: "Overview"
-description: "BotMeriendo uses a cog-based modular architecture: three Discord.py Cog modules are loaded dynamically at startup through a single entry point with shared in-memory state."
+description: "BotMeriendo loads three Discord.py cogs at startup. Shared queue state lives in src/utils/state.py and is imported by both the music and events cogs."
 ---
 
 BotMeriendo is structured around discord.py's Cog system — each functional area (music, general, events) is a separate Python module loaded dynamically at startup. This separation keeps concerns isolated: music playback logic never touches event handling, and shared state is managed in one place. The entry point (`src/main.py`) wires everything together, while `src/utils/` provides logging and queue state that every cog imports.
@@ -76,7 +76,7 @@ BotMeriendo is structured around discord.py's Cog system — each functional are
     Logging setup that writes to both `bot.log` (file) and stdout simultaneously. Configures log levels per-namespace to reduce discord.py noise.
   </Card>
   <Card title="src/utils/state.py" icon="database">
-    Defines the shared `music_queues` dict (keyed by guild ID) that every music-related module imports. Single source of truth for per-guild queue state.
+    Defines the shared `music_queues` dict (keyed by guild ID). `src/cogs/music.py` imports it directly; `src/cogs/events.py` imports it via `src.cogs.music`. Single source of truth for per-guild queue state.
   </Card>
   <Card title="src/config.py" icon="gear">
     Loads `TOKEN` and `TRGGKEY` from the `.env` file via `python-dotenv`. Provides `validate_config()` and derives `PREFIX` (`TRGGKEY` value, or `!` if unset).
@@ -111,7 +111,7 @@ Queue state lives entirely in `src/utils/state.py`:
 music_queues = {}
 ```
 
-`music_queues` is a plain Python `dict` keyed by guild ID (`int`). Each value is a list of `(video_url, title)` tuples where `video_url` is the canonical YouTube watch URL and `title` is the human-readable video name. Both `src/cogs/music.py` and `src/cogs/events.py` import this same object, so mutations from either cog are immediately visible to the other.
+`music_queues` is a plain Python `dict` keyed by guild ID (`int`). Each value is a list of `(video_url, title)` tuples where `video_url` is the canonical YouTube watch URL and `title` is the human-readable video name. `src/cogs/music.py` imports `music_queues` directly from `src.utils.state`. `src/cogs/events.py` imports it from `src.cogs.music` (which re-exports the same object), so mutations from either cog are immediately visible to the other.
 
 Because it is a plain in-memory dict:
 
