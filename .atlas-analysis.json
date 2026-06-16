@@ -1,0 +1,73 @@
+{
+  "projectType": "general",
+  "projectName": "BotMeriendo",
+  "projectDescription": "A Discord utility and music bot built in Python that streams audio from YouTube and is deployed via Docker.",
+  "theme": "aspen",
+  "primaryColor": "#5865F2",
+  "lightColor": "#7289DA",
+  "darkColor": "#3A3F6B",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction",
+              "deployment/docker",
+              "deployment/local"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/environment-variables",
+              "configuration/bot-setup"
+            ]
+          },
+          {
+            "group": "Commands",
+            "pages": [
+              "commands/music",
+              "commands/general"
+            ]
+          },
+          {
+            "group": "Architecture",
+            "pages": [
+              "architecture/overview",
+              "architecture/events",
+              "architecture/logging"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "YouTube music streaming (search by keyword or direct URL)",
+    "Playlist support with up to 30-song queue",
+    "Interactive Discord UI controls (pause/resume, skip buttons)",
+    "Auto-disconnect from voice channel after 1 minute of inactivity",
+    "Configurable command prefix via environment variable",
+    "Docker-based deployment with CI/CD via GitHub Actions",
+    "Structured logging to file and stdout",
+    "Modular cog architecture (music, general, events)"
+  ],
+  "publicApiSurface": [
+    "!play <query|url>",
+    "!skip",
+    "!stop",
+    "!pause",
+    "!resume",
+    "!queue",
+    "!join",
+    "!leave",
+    "!ping",
+    "!hola",
+    "!comandos",
+    "TOKEN env var",
+    "TRGGKEY env var"
+  ]
+}

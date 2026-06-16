@@ -1,0 +1,107 @@
+---
+title: "Deploy BotMeriendo with Docker Compose"
+sidebarTitle: "Docker"
+description: "Step-by-step guide to deploying BotMeriendo using Docker Compose, managing the running container, and automating deploys with GitHub Actions."
+---
+
+Docker is the recommended way to run BotMeriendo in production. It bundles Python, FFmpeg, and every dependency into a single reproducible image, so the bot behaves identically whether it runs on your laptop, a cloud VM, or a Raspberry Pi at home. By the end of this guide you will have the bot running in the background, configured to restart automatically after reboots, and optionally wired up to a GitHub Actions workflow that redeploys on every push to `main`.
+
+## Prerequisites
+
+Before you begin, make sure the following are in place:
+
+- **Docker and Docker Compose** — [Install Docker Engine](https://docs.docker.com/get-docker/) and verify `docker compose version` works in your terminal.
+- **A Discord bot token** — create an application and bot account at the [Discord Developer Portal](https://discord.com/developers/applications).
+- **A host machine** — any Linux machine with Docker support works; the project was originally built to run on a Raspberry Pi.
+
+## Step-by-step deployment
+
+<Steps>
+  <Step title="Clone the repository">
+    Download the source code onto your host machine:
+
+    ```bash title="Clone"
+    git clone <url-del-repo>
+    cd botMeriendo
+    ```
+  </Step>
+
+  <Step title="Create the .env file">
+    Copy the provided example file to create your local configuration:
+
+    ```bash title="Create .env"
+    cp .env.example .env
+    ```
+  </Step>
+
+  <Step title="Edit .env with your credentials">
+    Open `.env` in your preferred editor and fill in the two required values:
+
+    ```env title=".env"
+    TOKEN=tu_token_aqui_sin_comillas
+    TRGGKEY=!
+    ```
+
+    - `TOKEN` — your Discord bot token (no quotes needed).
+    - `TRGGKEY` — the character or string used to trigger commands (defaults to `!`).
+  </Step>
+
+  <Step title="Build and start the bot">
+    Build the image and start the container in detached mode:
+
+    ```bash title="Start"
+    docker compose up -d --build
+    ```
+
+    Docker will pull the `python:3.11-slim` base image, install FFmpeg and the Python dependencies, copy the source code, and start the bot. The first build takes a couple of minutes; subsequent builds are much faster thanks to layer caching.
+  </Step>
+</Steps>
+
+## Managing the bot
+
+Once the container is running you can use these standard Docker Compose commands to operate it:
+
+```bash title="Follow live logs"
+docker compose logs -f
+```
+
+```bash title="Stop the bot"
+docker compose down
+```
+
+```bash title="Restart the bot"
+docker compose restart discord-bot
+```
+
+<Note>
+  The `docker-compose.yml` sets `restart: unless-stopped` on the `discord-bot` service. This means Docker will automatically bring the bot back up after a server reboot or an unexpected crash — you do not need a separate init script or systemd unit.
+</Note>
+
+## CI/CD with GitHub Actions
+
+BotMeriendo ships with a workflow at `.github/workflows/deploy.yml` that automatically redeploys the bot every time you push to `main`. The workflow runs on a **self-hosted runner** (the same machine that hosts the bot) and performs three steps:
+
+1. **Checks out** the latest code with `actions/checkout@v4`.
+2. **Writes the `.env` file** from the `ENV_FILE` repository secret — this keeps credentials out of the repository while still making them available at deploy time.
+3. **Rebuilds and restarts** the container with `docker compose up -d --build --force-recreate`, then runs `docker image prune -f` to remove stale images and prevent the host disk from filling up.
+
+<Tip>
+  Store the full contents of your `.env` file as a single Actions secret named `ENV_FILE` under **Repository Settings → Secrets and variables → Actions**. The workflow writes that secret directly to `.env` on the runner before Docker reads it.
+</Tip>
+
+## docker-compose.yml reference
+
+```yaml title="docker-compose.yml"
+services:
+  discord-bot:
+    build: .
+    container_name: bot_melendo
+    restart: unless-stopped # Si la Pi se reinicia, el bot arranca solo
+    env_file:
+      - .env
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+    volumes:
+      # Opcional: Si quieres que los logs o descargas persistan fuera, añádelos aquí
+      - ./src:/app/src # Útil para editar el código sin reconstruir la imagen (solo reiniciando)
+```

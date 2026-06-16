@@ -1,0 +1,90 @@
+---
+title: "Create and configure a Discord bot application"
+sidebarTitle: "Bot Setup"
+description: "Step-by-step guide to creating a Discord bot application in the Developer Portal, configuring required intents, and inviting the bot to your server."
+---
+
+Before running BotMeriendo you need a Discord bot application and a token from the [Discord Developer Portal](https://discord.com/developers/applications). This page walks you through creating the application, enabling the privileged intents BotMeriendo requires, and generating an invite URL so the bot can join your server.
+
+---
+
+## Create the bot application
+
+<Steps>
+  <Step title="Open the Discord Developer Portal">
+    Go to [https://discord.com/developers/applications](https://discord.com/developers/applications) and sign in with your Discord account.
+  </Step>
+  <Step title="Create a new application">
+    Click **New Application** in the top-right corner. Give it a name — for example, `BotMeriendo` — then click **Create**.
+  </Step>
+  <Step title="Add a bot user">
+    In the left sidebar select **Bot**, then click **Add Bot**. Confirm when prompted. This creates the bot user that will connect to Discord and appear in your server.
+  </Step>
+  <Step title="Copy the bot token">
+    Under the **Token** section click **Reset Token** (you may be asked to enter your 2FA code). Copy the token that appears — this is your `TOKEN` value. Store it somewhere safe; Discord will not show it again.
+  </Step>
+  <Step title="Save the token to your .env file">
+    Open the `.env` file in the project root and set the `TOKEN` variable:
+
+    ```dotenv
+    TOKEN=your-token-here
+    ```
+
+    See [Env Variables](/configuration/environment-variables) for the full variable reference.
+  </Step>
+</Steps>
+
+---
+
+## Required intents
+
+BotMeriendo calls `discord.Intents.all()` and explicitly enables `message_content` so that prefix commands can read message text. The relevant lines from `src/main.py` are:
+
+```python
+intents = discord.Intents.all()
+intents.message_content = True
+bot = commands.Bot(command_prefix=PREFIX, intents=intents, description=descripcion)
+```
+
+Several of the intents included in `discord.Intents.all()` are **Privileged Gateway Intents** that must be manually enabled in the Developer Portal before the bot is allowed to receive that data.
+
+In the Developer Portal, navigate to your application → **Bot** → **Privileged Gateway Intents** and enable all three toggles:
+
+| Intent | Why BotMeriendo needs it |
+|---|---|
+| **Message Content Intent** | Required to read the text of messages so prefix commands (e.g. `!play`) can be parsed. |
+| **Server Members Intent** | Required by `discord.Intents.all()` — lets the bot track member joins, leaves, and voice-state changes. |
+| **Presence Intent** | Required by `discord.Intents.all()` — lets the bot observe user presence and activity data. |
+
+Click **Save Changes** after enabling the toggles.
+
+---
+
+## Invite the bot to your server
+
+<Steps>
+  <Step title="Open the URL Generator">
+    In the Developer Portal, go to **OAuth2** → **URL Generator** in the left sidebar.
+  </Step>
+  <Step title="Select scopes">
+    Under **Scopes**, check both:
+    - `bot`
+    - `applications.commands`
+  </Step>
+  <Step title="Select bot permissions">
+    A **Bot Permissions** panel will appear below the scopes. Enable the following permissions so BotMeriendo can join voice channels and respond in text channels:
+
+    - Connect
+    - Speak
+    - Send Messages
+    - Embed Links
+    - Read Message History
+  </Step>
+  <Step title="Authorize the bot">
+    Copy the generated URL at the bottom of the page, open it in your browser, select the server you want to add BotMeriendo to, and click **Authorize**. The bot will appear in your server's member list.
+  </Step>
+</Steps>
+
+<Tip>
+  BotMeriendo must be in the same voice channel as the user who issues a music command for playback to work. Have the user join a voice channel before calling `play` — the bot will join automatically and start streaming.
+</Tip>

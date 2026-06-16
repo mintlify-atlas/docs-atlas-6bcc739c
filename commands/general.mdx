@@ -1,0 +1,84 @@
+---
+title: "General utility commands for BotMeriendo"
+sidebarTitle: "General"
+description: "Reference for BotMeriendo's general utility commands — ping for health checks, hola for greetings, and comandos for a full command listing."
+---
+
+BotMeriendo includes a small set of general utility commands for testing connectivity, greeting users, and exploring all available commands across every loaded cog.
+
+<Note>
+  The default command prefix is `!`. You can change it by setting the `TRGGKEY` environment variable before starting the bot. All examples on this page use the default `!` prefix.
+</Note>
+
+## Command Reference
+
+### `!ping`
+
+A simple health check command. The bot replies with `pong`.
+
+```text
+!ping
+```
+
+**Use case:** Confirm the bot is online, connected to Discord's gateway, and actively processing commands. If there is no response, the bot may be offline or experiencing connectivity issues.
+
+---
+
+### `!hola`
+
+Greets the invoking user with a Discord mention.
+
+```text
+!hola
+```
+
+**Example output:**
+
+```text
+Hola @username!
+```
+
+The bot resolves `ctx.author.mention` so the reply always pings the user who sent the command, regardless of their display name.
+
+---
+
+### `!comandos`
+
+Displays all available commands grouped by category in a Discord embed message.
+
+```text
+!comandos
+```
+
+The bot dynamically iterates over every registered command from all loaded cogs and groups them by their `category` attribute. Commands without an explicit category are grouped under **Sin categoría**.
+
+**Example embed output:**
+
+> 📋 **Comandos del Bot**
+>
+> **Música**
+> `!play` — Reproduce música de YouTube (acepta URL o búsqueda)
+> `!skip` — Salta la canción actual
+> `!stop` — Detiene la música y limpia la cola
+> `!pause` — Pausa la música
+> `!resume` — Reanuda la música
+> `!queue` — Muestra la cola de reproducción
+> `!join` — El bot se une a tu canal de voz
+> `!leave` — El bot sale del canal de voz
+>
+> **Basico**
+> `!ping` — pong?
+> `!hola` — Saluda al usuario
+> `!comandos` — Muestra todos los comandos disponibles
+
+Each line in the embed follows the format `` `!<command>` — <help text> ``, using the configured prefix and the `help` string defined on each command.
+
+<Note>
+  BotMeriendo also registers Discord.py's built-in `!help` command automatically. `!comandos` is the bot's own custom embed-based alternative that groups commands by category for easier navigation.
+</Note>
+
+---
+
+<Tip>
+  Use `!comandos` to always see the up-to-date list of commands with their current prefix — especially useful after changing `TRGGKEY` or after the bot has been updated with new cogs.
+</Tip>

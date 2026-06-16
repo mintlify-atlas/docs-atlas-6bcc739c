@@ -1,0 +1,133 @@
+---
+title: "Logging configuration and output in BotMeriendo"
+sidebarTitle: "Logging"
+description: "BotMeriendo writes structured logs to both bot.log and stdout via Python's logging module, with per-namespace level control to keep discord.py noise out of production logs."
+---
+
+BotMeriendo uses Python's standard `logging` module configured in `src/utils/logger.py`. Logs are written simultaneously to `bot.log` (in the project root working directory) and to stdout, making them accessible both as a persistent file and via `docker compose logs`. The entire logging setup happens at module import time — `setup_logging()` is called when `logger.py` is first imported, so the `logger` object is ready before any cog loads.
+
+## Log Format
+
+All log records share the same format string and date format:
+
+```text
+%(asctime)s %(levelname)-8s %(name)s %(message)s
+```
+
+| Field | Example | Description |
+|---|---|---|
+| `%(asctime)s` | `2024-07-15 14:32:01` | Timestamp formatted as `%Y-%m-%d %H:%M:%S` |
+| `%(levelname)-8s` | `INFO    ` | Level name, left-aligned and padded to 8 characters |
+| `%(name)s` | `bot` | Logger name — `bot` for application code, `discord.gateway` for gateway events, etc. |
+| `%(message)s` | `We have logged in as BotMeriendo#1234` | The log message |
+
+A sample log line looks like this:
+
+```text
+2024-07-15 14:32:01 INFO     bot We have logged in as BotMeriendo#1234
+```
+
+## Log Levels
+
+BotMeriendo configures log levels per-namespace to surface application events while suppressing the high-volume internal chatter from the discord.py library.
+
+| Logger | Level | Effect |
+|---|---|---|
+| Root logger (`basicConfig`) | `INFO` | Captures `INFO` and above from all loggers by default |
+| `bot` | `INFO` (inherited) | All application-level messages: startup, queue events, playback errors |
+| `discord` | `WARNING` | Suppresses discord.py's verbose `INFO` internals (cache updates, rate-limit retries, etc.) |
+| `discord.http` | `WARNING` | Suppresses per-request HTTP debug logs from the REST client |
+| `discord.gateway` | `INFO` | Connection lifecycle events (heartbeats, reconnects) are kept — useful for diagnosing drops |
+
+```python
+logging.getLogger('discord').setLevel(logging.WARNING)
+logging.getLogger('discord.http').setLevel(logging.WARNING)
+logging.getLogger('discord.gateway').setLevel(logging.INFO)
+```
+
+## Handlers
+
+Two handlers are attached at the root logger level by `basicConfig`, so every log record that passes a level filter is written to both destinations:
+
+- **`FileHandler('bot.log')`** — Opens `bot.log` in the current working directory in append mode. When running under Docker, the working directory is the project root (set in the `Dockerfile`), so the file appears as `botMeriendo/bot.log` on the host if you mount the directory as a volume.
+- **`StreamHandler()`** — Writes to `stdout`. Docker captures this automatically, making records visible in `docker compose logs`.
+
+## Accessing Logs
+
+**Via Docker (recommended for production):**
+
+```bash
+docker compose logs -f
+```
+
+Stream live log output from the running container. Add `--since 1h` to limit to the last hour:
+
+```bash
+docker compose logs -f --since 1h
+```
+
+**Via the log file (local or inside the container):**
+
+```bash
+# View the full file
+cat bot.log
+
+# Follow new entries in real time
+tail -f bot.log
+
+# Search for errors only
+grep ERROR bot.log
+```
+
+**Directly inside a running container:**
+
+```bash
+docker compose exec bot tail -f bot.log
+```
+
+<Tip>
+  The `bot.log` file is never rotated or truncated automatically. On a long-running deployment this file will grow indefinitely. To address this, replace `FileHandler` with a `RotatingFileHandler` in `setup_logging()`, or configure `logrotate` on the host to manage the file externally.
+
+  ```python
+  from logging.handlers import RotatingFileHandler
+
+  RotatingFileHandler('bot.log', maxBytes=5_000_000, backupCount=3)
+  ```
+
+  This keeps up to three 5 MB backup files (`bot.log.1`, `bot.log.2`, `bot.log.3`) alongside the active log.
+</Tip>
+
+## Full `setup_logging()` Implementation
+
+The complete function from `src/utils/logger.py`:
+
+```python
+import logging
+import os
+
+def setup_logging():
+    # Eliminar handlers existentes para evitar duplicados si se llama varias veces
+    root_logger = logging.getLogger()
+    if root_logger.handlers:
+        root_logger.handlers = []
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s %(levelname)-8s %(name)s %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+        handlers=[
+            logging.FileHandler('bot.log'),
+            logging.StreamHandler()
+        ]
+    )
+
+    logging.getLogger('discord').setLevel(logging.WARNING)
+    logging.getLogger('discord.http').setLevel(logging.WARNING)
+    logging.getLogger('discord.gateway').setLevel(logging.INFO)
+
+    return logging.getLogger('bot')
+
+logger = setup_logging()
+```
+
+The guard at the top (`if root_logger.handlers: root_logger.handlers = []`) prevents duplicate log entries if the module is reloaded during development (e.g. via a cog hot-reload that re-imports the utils package). Without it, each reload would attach an additional pair of handlers and every message would be written two, three, or more times.

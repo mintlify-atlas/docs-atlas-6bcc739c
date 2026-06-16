@@ -1,0 +1,117 @@
+---
+title: "Run BotMeriendo locally for development"
+sidebarTitle: "Local Dev"
+description: "How to run BotMeriendo directly with Python for local development and testing, without Docker, including virtual environment setup and tips."
+---
+
+Running BotMeriendo directly with Python — without Docker — is the most convenient setup for active development and testing. You get a shorter feedback loop: edit a file, restart the process, and see the result immediately. Python 3.11 or newer is required, along with FFmpeg installed at the system level so the voice pipeline can encode audio.
+
+## Prerequisites
+
+<Steps>
+  <Step title="Python 3.11 or newer">
+    Download and install Python from [python.org](https://www.python.org/downloads/) or your system package manager. Verify the version with:
+
+    ```bash title="Check Python version"
+    python --version
+    ```
+  </Step>
+
+  <Step title="FFmpeg">
+    FFmpeg must be available on your system `PATH` before you start the bot.
+
+    <CodeGroup>
+      ```bash title="Debian / Ubuntu"
+      sudo apt install ffmpeg
+      ```
+
+      ```text title="Windows"
+      Download the FFmpeg build from https://ffmpeg.org/download.html,
+      extract it, and add the `bin/` folder to your system PATH.
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="A Discord bot token">
+    Create a bot application at the [Discord Developer Portal](https://discord.com/developers/applications) and copy the token. You will need it when configuring the `.env` file.
+  </Step>
+</Steps>
+
+## Setup and run
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash title="Clone"
+    git clone <url-del-repo>
+    cd botMeriendo
+    ```
+  </Step>
+
+  <Step title="Create a virtual environment and activate it">
+    Using a virtual environment keeps the project's dependencies isolated from your system Python installation:
+
+    ```bash title="Create the environment"
+    python -m venv venv
+    ```
+
+    <CodeGroup>
+      ```bash title="Linux / macOS"
+      source venv/bin/activate
+      ```
+
+      ```bash title="Windows"
+      venv\Scripts\activate
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Install dependencies">
+    With the virtual environment active, install all required Python packages:
+
+    ```bash title="Install"
+    pip install -r requirements.txt
+    ```
+
+    This installs `discord.py[voice]`, `yt-dlp`, `PyNaCl`, and `python-dotenv` as declared in `requirements.txt`.
+  </Step>
+
+  <Step title="Create and configure .env">
+    Copy the example file and fill in your values:
+
+    ```bash title="Create .env"
+    cp .env.example .env
+    ```
+
+    ```env title=".env"
+    TOKEN=tu_token_aqui_sin_comillas
+    TRGGKEY=!
+    ```
+
+    - `TOKEN` — your Discord bot token.
+    - `TRGGKEY` — the command prefix character (defaults to `!`).
+  </Step>
+
+  <Step title="Run the bot">
+    Start the bot from the project root:
+
+    ```bash title="Start"
+    python -m src.main
+    ```
+
+    You should see log output confirming each cog has loaded followed by the bot's ready event.
+  </Step>
+</Steps>
+
+## Development tips
+
+- **Source code lives in `src/`** — the bot is structured as a package with cogs (`src/cogs/`), utilities (`src/utils/`), and a central config module (`src/config.py`). Any change you make takes effect the next time you restart the process.
+- **Logs go to two places at once** — the logging setup in `src/utils/logger.py` writes to both `bot.log` (rotating file) and stdout simultaneously, so you can watch the terminal and also inspect the file after the fact.
+- **The `src/` volume mount in `docker-compose.yml`** — if you switch to Docker, the compose file mounts `./src` into the container at `/app/src`. This means you can edit source files on the host and restart the container (without a full rebuild) to pick up the changes.
+
+<Warning>
+  A `cookies.txt` file must exist in the project root for yt-dlp to function correctly. If you do not have a populated cookies file, create an empty one before starting the bot:
+
+  ```bash title="Create empty cookies file"
+  touch cookies.txt
+  ```
+</Warning>

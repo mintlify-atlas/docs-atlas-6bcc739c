@@ -1,0 +1,82 @@
+---
+title: "BotMeriendo environment variable reference"
+sidebarTitle: "Env Variables"
+description: "Complete reference for every environment variable BotMeriendo reads at startup, including required tokens and optional command-prefix configuration."
+---
+
+BotMeriendo reads its configuration from environment variables loaded via `python-dotenv` from a `.env` file in the project root. Copy `.env.example` to `.env` and fill in the values before starting the bot — the application calls `validate_config()` at boot and will refuse to start if any required variable is absent.
+
+## .env.example
+
+The repository ships a template you can use as a starting point:
+
+```dotenv
+TOKEN=TokedeDc
+TRGGKEY=SimboloParaComandos
+```
+
+Copy it to `.env` and replace the placeholder values with your real credentials:
+
+```bash
+cp .env.example .env
+```
+
+---
+
+## Variable Reference
+
+<ParamField path="TOKEN" type="string" required>
+  The Discord bot token obtained from the [Discord Developer Portal](https://discord.com/developers/applications).
+
+  BotMeriendo passes this value directly to `bot.start(TOKEN)` in `src/main.py`. If this variable is missing or empty, `validate_config()` in `src/config.py` raises a `ValueError` and the process exits before the bot ever connects:
+
+  ```python
+  def validate_config():
+      if not TOKEN:
+          raise ValueError("TOKEN no encontrado en el archivo .env")
+  ```
+
+  Never share or commit this value — it grants full control over the bot account.
+</ParamField>
+
+<ParamField path="TRGGKEY" type="string" default="!">
+  The command prefix character(s) that BotMeriendo listens for before each command name (e.g. `!play`, `>>play`, `?play`).
+
+  If the variable is not set or is empty, the prefix falls back to `!`:
+
+  ```python
+  TRGGKEY = os.getenv("TRGGKEY")
+  PREFIX = TRGGKEY if TRGGKEY else "!"
+  ```
+
+  You can set this to any string. Common choices include `!`, `>>`, `?`, or `$`.
+</ParamField>
+
+---
+
+## Loading order
+
+<Note>
+  Variables defined in `.env` are loaded by `python-dotenv` via `load_dotenv()` at import time in `src/config.py`. If the same variable is already present in the system environment (e.g. set in a Docker Compose `environment` block or exported in your shell), the **system value takes precedence** and the `.env` value is ignored. This lets you override settings per-environment without editing the file.
+</Note>
+
+---
+
+## Security
+
+<Warning>
+  Never commit your `.env` file to version control. It contains your bot token, which grants full programmatic access to your Discord bot account — including sending messages, joining voice channels, and managing servers the bot belongs to. Add `.env` to your `.gitignore` before your first commit.
+</Warning>
+
+---
+
+## Example: custom prefix
+
+The following `.env` configures BotMeriendo to use `>>` as its command prefix:
+
+```dotenv
+TOKEN=your-bot-token-here
+TRGGKEY=>>
+```
+
+With this configuration, users invoke commands as `>>play`, `>>skip`, `>>queue`, and so on.

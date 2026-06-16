@@ -1,0 +1,75 @@
+---
+title: "BotMeriendo: self-hosted Discord music bot"
+sidebarTitle: "Introduction"
+description: "An overview of BotMeriendo — its features, project structure, and the technology stack powering this self-hosted Discord music and utility bot."
+---
+
+BotMeriendo is a self-hosted Discord bot built in Python that brings music playback, playlist management, and general utilities to your server. Designed to be modular and easy to operate, it streams audio directly from YouTube, manages a live queue, and keeps itself well-behaved by disconnecting automatically when it is no longer needed. Whether you want to run it on a spare Raspberry Pi at home or on any Linux server, BotMeriendo ships as a Docker image so you can go from zero to playing music with a single command.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="YouTube Streaming" icon="youtube">
+    Search for songs by name or paste a direct YouTube URL — BotMeriendo resolves and streams audio on demand using yt-dlp.
+  </Card>
+  <Card title="Playlist & Queue Management" icon="list-music">
+    Add multiple tracks and manage the playback queue dynamically with commands like `!queue`, `!skip`, and `!stop`.
+  </Card>
+  <Card title="Interactive UI Controls" icon="circle-play">
+    Rich Discord embeds and visual feedback give users at-a-glance status for what is playing and what is up next.
+  </Card>
+  <Card title="Auto-Disconnect" icon="right-from-bracket">
+    The bot automatically leaves the voice channel after 1 minute of inactivity when it is left alone, keeping your server tidy.
+  </Card>
+  <Card title="Configurable Prefix" icon="sliders">
+    The command trigger character defaults to `!` and can be changed to anything you like via a single environment variable.
+  </Card>
+  <Card title="Docker Deployment" icon="docker">
+    A production-ready `Dockerfile` and `docker-compose.yml` are included, making deployment and updates reproducible on any host.
+  </Card>
+  <Card title="Structured Logging" icon="file-lines">
+    A rotating log system writes activity to both `bot.log` and stdout simultaneously, making debugging straightforward in any environment.
+  </Card>
+  <Card title="Graceful Error Handling" icon="triangle-exclamation">
+    Users receive visual feedback inside Discord whenever something goes wrong, and the bot shuts down cleanly on `SIGTERM`/`SIGINT`.
+  </Card>
+</CardGroup>
+
+## Project Structure
+
+The repository is laid out so that every concern lives in its own module. The `src/` directory holds all bot logic, keeping configuration, cogs, and utilities clearly separated from deployment files at the project root.
+
+```text title="Project layout"
+botMeriendo/
+├── src/
+│   ├── cogs/          # Bot modules (loaded as extensions)
+│   │   ├── events.py  # Event handling (join, errors, voice)
+│   │   ├── general.py # Basic commands
+│   │   └── music.py   # Music playback logic
+│   ├── utils/         # Shared utilities
+│   │   ├── logger.py  # Rotating log configuration
+│   │   └── state.py   # Shared state (queues)
+│   ├── config.py      # Configuration and validation
+│   └── main.py        # Entry point
+├── Dockerfile         # Docker image definition
+├── docker-compose.yml # Container orchestration
+└── requirements.txt   # Python dependencies
+```
+
+## Technology Stack
+
+BotMeriendo is built on a lean set of well-maintained libraries:
+
+| Component | Version / Notes |
+| :--- | :--- |
+| **Python** | 3.11 or newer |
+| **discord.py\[voice\]** | Discord API wrapper with voice support |
+| **yt-dlp** | `>= 2024.12.0` — YouTube audio extraction |
+| **FFmpeg** | System-level audio encoding/transcoding |
+| **PyNaCl** | Encryption library required for voice |
+| **python-dotenv** | Loads `.env` file into environment variables |
+| **Docker** | Containerises the bot and all system dependencies |
+
+<Note>
+  The default command prefix is `!`. You can change it to any character or string by setting the `TRGGKEY` environment variable in your `.env` file before starting the bot.
+</Note>

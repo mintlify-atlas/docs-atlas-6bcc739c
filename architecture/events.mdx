@@ -1,0 +1,125 @@
+---
+title: "Discord event listeners in BotMeriendo"
+sidebarTitle: "Events"
+description: "src/cogs/events.py registers on_ready, on_member_join, on_command_error, and on_voice_state_update listeners that handle bot lifecycle, member activity, and voice channel management."
+---
+
+`src/cogs/events.py` registers Discord gateway event listeners that handle bot lifecycle, member activity, command errors, and voice channel state changes. All four listeners live in the `Events` cog, which is loaded at startup by `main.py` along with the music and general cogs. The events cog also imports `music_queues` from `src.cogs.music` so it can clear a guild's queue whenever the bot disconnects from voice.
+
+## Event Reference
+
+### `on_ready`
+
+Fires once when the bot has successfully authenticated with Discord and the internal cache is populated. BotMeriendo uses this event purely as a startup confirmation log line.
+
+**Action:** Logs `We have logged in as {bot.user}` at `INFO` level.
+
+```python
+@commands.Cog.listener()
+async def on_ready(self):
+    logger.info(f'We have logged in as {self.bot.user}')
+```
+
+<Note>
+  `on_ready` can fire more than once during a session if the bot loses its gateway connection and successfully reconnects. The log entry is written each time.
+</Note>
+
+---
+
+### `on_member_join`
+
+Fires whenever a new member joins any guild the bot is in.
+
+**Action:** Sends a DM to the new member greeting them by name.
+
+```python
+@commands.Cog.listener()
+async def on_member_join(self, member):
+    await member.send(f'Bienvenido al server {member.name}, bonito nombre por cierto!')
+```
+
+<Note>
+  The DM will silently fail if the new member has DMs disabled for server members. discord.py raises a `Forbidden` error in that case, which will be caught by `on_command_error` if it bubbles up, or silently dropped if it occurs outside a command context.
+</Note>
+
+---
+
+### `on_command_error`
+
+Fires whenever a command invocation raises an exception. The handler covers four distinct cases:
+
+| Error type | Bot response |
+|---|---|
+| `CommandNotFound` | Silently ignored — no message sent to the channel |
+| `MissingRequiredArgument` | Replies `"Faltan argumentos para este comando."` |
+| `CommandOnCooldown` | Replies with the remaining cooldown seconds |
+| Any other error | Logs at `ERROR` level, replies `"Ocurrió un error inesperado."` |
+
+```python
+@commands.Cog.listener()
+async def on_command_error(self, ctx, error):
+    if isinstance(error, commands.CommandNotFound):
+        return
+    elif isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("Faltan argumentos para este comando.")
+    elif isinstance(error, commands.CommandOnCooldown):
+        await ctx.send(f"Espera un poco, comando en enfriamiento: {error.retry_after:.2f}s")
+    else:
+        logger.error(f"Error no controlado: {error}")
+        await ctx.send("Ocurrió un error inesperado.")
+```
+
+Silencing `CommandNotFound` is intentional — without it, every typo or message that starts with the command prefix (e.g. `!`) would produce a bot reply in the channel.
+
+---
+
+### `on_voice_state_update`
+
+Fires whenever any guild member's voice state changes: joining, leaving, muting, deafening, moving channels, etc. BotMeriendo handles two specific cases inside a single listener.
+
+#### Case 1 — Bot forcibly disconnected
+
+When the bot itself (`member == self.bot.user`) transitions from being in a channel (`before.channel` is set) to not being in any channel (`after.channel` is `None`), the guild's music queue is cleared immediately.
+
+This handles the scenario where a server administrator manually kicks the bot from a voice channel, which would otherwise leave a stale, unreachable queue in memory.
+
+```python
+# Caso 1: El bot se desconecta o le desconectan
+if member == self.bot.user and before.channel and not after.channel:
+    if before.channel.guild.id in music_queues:
+        music_queues[before.channel.guild.id] = []
+        logger.info(f"Cola limpiada para {before.channel.guild.name} tras desconexión del bot.")
+```
+
+#### Case 2 — Auto-disconnect when left alone
+
+When any member leaves a voice channel, the listener checks whether the bot is in that same channel and is now the only remaining member. If so, it starts a 60-second timer. After the timer expires, it checks again: if the bot is still alone and still connected, it disconnects and clears the queue.
+
+```python
+# Caso 2: Desconexión automática si se queda solo
+if before.channel is not None:
+    # Verificar si el bot está conectado en ese guild
+    voice_client = discord.utils.get(self.bot.voice_clients, guild=before.channel.guild)
+
+    # Si el bot está en el canal del que alguien salió
+    if voice_client and voice_client.channel == before.channel:
+        # Si solo queda 1 miembro (el bot)
+        if len(before.channel.members) == 1:
+            logger.info(f"Bot solo en {before.channel.name}, iniciando timer de desconexión.")
+            await asyncio.sleep(60)
+
+            # Verificar de nuevo tras el tiempo
+            if len(before.channel.members) == 1 and voice_client.is_connected():
+                await voice_client.disconnect()
+                if before.channel.guild.id in music_queues:
+                    music_queues[before.channel.guild.id] = []
+                logger.info(f"Desconectado de {before.channel.name} por inactividad.")
+```
+
+<Note>
+  The auto-disconnect timer is implemented with a plain `asyncio.sleep(60)` inside the event handler — it is not a persistent background task. This means:
+
+  - If several members leave the same channel in quick succession, multiple concurrent 60-second timers can be running simultaneously for the same channel.
+  - The double-check (`len(before.channel.members) == 1 and voice_client.is_connected()`) at the end of the sleep prevents a double-disconnect: only the timer that finds the condition still true will actually call `disconnect()`.
+  - If someone rejoins the channel during the 60-second window, the condition fails when the timer wakes up and the bot stays connected.
+</Note>

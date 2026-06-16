@@ -1,0 +1,193 @@
+---
+title: "Music commands for BotMeriendo"
+sidebarTitle: "Music"
+description: "Complete reference for BotMeriendo's music commands — play, skip, pause, resume, stop, queue, join, and leave — powered by yt-dlp and FFmpeg."
+---
+
+BotMeriendo's music commands let you stream audio from YouTube directly into voice channels. Commands accept both keyword searches and direct URLs, including individual videos and full playlists.
+
+<Note>
+  The default command prefix is `!`. You can change it by setting the `TRGGKEY` environment variable before starting the bot. All examples on this page use the default `!` prefix.
+</Note>
+
+## Command Reference
+
+### `!play <query or URL>`
+
+Searches YouTube for the top result matching your query, or queues a direct video or playlist URL.
+
+```text
+!play lofi hip hop
+!play https://www.youtube.com/watch?v=dQw4w9WgXcQ
+!play https://www.youtube.com/playlist?list=PLxxx
+```
+
+**Behavior:**
+
+- If you are not already in a voice channel, the bot automatically joins the voice channel you are currently in.
+- When a **search query** is provided (no `http` prefix), the bot runs a `ytsearch:` lookup via yt-dlp and queues the top result.
+- When a **video URL** is provided, the bot extracts metadata using a fast flat-extract pass and adds the track to the queue.
+- When a **playlist URL** is provided, entries are added to the queue in order, up to the 30-song maximum (`MAX_QUEUE_SIZE = 30`). The bot sends a single confirmation message showing the playlist title and the number of tracks added.
+- The bot sends a `➕ Añadido a la cola: **<title>**` confirmation message for each individually queued track.
+- Audio stream URLs are resolved **Just-In-Time** (immediately before playback), keeping queue operations fast and lightweight.
+
+---
+
+### `!skip`
+
+Skips the currently playing song and immediately advances to the next entry in the queue.
+
+```text
+!skip
+```
+
+The bot replies with `⏭️ Canción saltada.` If the queue is empty after skipping, it announces that playback has ended.
+
+<Note>
+  The **⏭️ Skip** button on the "Now Playing" embed performs the same action without typing a command. See [Interactive Controls](#interactive-controls) below.
+</Note>
+
+---
+
+### `!stop`
+
+Stops playback immediately and clears the entire queue.
+
+```text
+!stop
+```
+
+The bot replies with:
+
+```text
+⏹️ Música detenida y cola vacía.
+```
+
+The bot remains in the voice channel after stopping. Use `!leave` to also disconnect it.
+
+---
+
+### `!pause`
+
+Pauses the currently playing song. The bot stays in the voice channel and the queue is preserved.
+
+```text
+!pause
+```
+
+The bot replies with `⏸️ Música pausada.`
+
+<Note>
+  The **⏸️ Pausa** button on the "Now Playing" embed performs the same action. After pausing, the button label changes to **▶️ Reanudar**.
+</Note>
+
+---
+
+### `!resume`
+
+Resumes a previously paused song from where it was paused.
+
+```text
+!resume
+```
+
+The bot replies with `▶️ Música reanudada.`
+
+<Note>
+  The **▶️ Reanudar** button on the "Now Playing" embed (shown after pausing) performs the same action. After resuming, the button reverts to **⏸️ Pausa**.
+</Note>
+
+---
+
+### `!queue`
+
+Displays all songs currently waiting in the playback queue. The currently playing song is **not** included in this list.
+
+```text
+!queue
+```
+
+**Example output:**
+
+```text
+📜 Cola de reproducción:
+1. Lofi Hip Hop Radio - Beats to Relax/Study To
+2. Chill Vibes Mix 2024
+3. Jazz Coffee Shop Ambience
+```
+
+<Note>
+  The queue is per-server (guild) and holds a maximum of **30 entries** (`MAX_QUEUE_SIZE = 30`). If the queue is empty, the bot replies with `La cola está vacía.`
+</Note>
+
+---
+
+### `!join`
+
+Makes the bot join your current voice channel without starting playback.
+
+```text
+!join
+```
+
+**Error handling:**
+
+- If you are not in a voice channel, the bot replies: `¡Debes estar en un canal de voz!`
+- If the bot lacks the **Connect** permission for that channel, it replies: `No tengo permisos para conectarme a ese canal.`
+
+---
+
+### `!leave`
+
+Disconnects the bot from the voice channel and clears the current guild's queue.
+
+```text
+!leave
+```
+
+If the bot is not in any voice channel when this command is used, it replies: `No estoy en ningún canal de voz.`
+
+---
+
+## Interactive Controls
+
+When `!play` successfully starts a song, BotMeriendo sends a **"Reproduciendo ahora"** (Now Playing) embed into the text channel. The embed includes:
+
+| Field | Content |
+|---|---|
+| **Title** | Reproduciendo ahora |
+| **Description** | Clickable hyperlink to the YouTube video — `[Song Title](video_url)` |
+| **Color** | Green (`#00ff00`) |
+
+The embed is accompanied by two interactive buttons:
+
+| Button | Style | Action |
+|---|---|---|
+| ⏸️ **Pausa** | Blurple | Pauses playback. Label changes to ▶️ **Reanudar** (green) when paused. |
+| ⏭️ **Skip** | Red | Skips to the next song in the queue. |
+
+Clicking a button sends an ephemeral (private) acknowledgment only visible to the user who clicked it. The embed itself is updated in place to reflect the new pause/resume state.
+
+---
+
+## Auto-Disconnect
+
+If BotMeriendo is the **only member** remaining in a voice channel, it waits **60 seconds** and then disconnects automatically, clearing the guild's queue. This frees up voice resources when everyone has left.
+
+<Note>
+  The auto-disconnect timer resets if another member rejoins the channel within the 60-second window.
+</Note>
+
+---
+
+## Queue Limits
+
+<Note>
+  The queue has a hard cap of **30 songs** (`MAX_QUEUE_SIZE = 30`). If you attempt to add items beyond this limit, the bot sends a warning:
+
+  ```text
+  ⚠️ La cola está llena, algunas canciones podrían no haberse añadido.
+  ```
+
+  For playlists longer than 30 tracks, only the first 30 entries will be added.
+</Note>
